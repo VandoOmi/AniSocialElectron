@@ -8,6 +8,7 @@ export const IPC_CHANNELS = {
   KEYBINDS_RECORDING_START: 'keybinds:recording-start',
   KEYBINDS_RECORDING_STOP: 'keybinds:recording-stop',
   PICK_SOUND_FILE: 'settings:pick-sound-file',
+  RETRY_LOAD: 'app:retry-load',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

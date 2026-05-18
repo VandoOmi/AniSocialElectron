@@ -130,6 +130,21 @@ function createWindow(): void {
     mainWindow?.show();
   });
 
+  // Show offline page when the site can't be reached
+  mainWindow.webContents.on(
+    'did-fail-load',
+    (_event, errorCode, errorDescription, validatedURL) => {
+      // Ignore aborted loads (e.g. user navigated away before load finished)
+      if (errorCode === -3) return;
+      // Only handle failures for our target URL
+      if (!validatedURL.startsWith(APP_CONFIG.TARGET_URL)) return;
+      const offlinePath = path.join(__dirname, '..', 'assets', 'offline.html');
+      mainWindow?.loadFile(offlinePath, {
+        query: { code: String(errorCode), desc: errorDescription },
+      });
+    },
+  );
+
   // Inject PushManager mock + Notification override into main world before page scripts run
   // (contextIsolation prevents preload prototype patches from reaching the page)
   // Mocks PushManager so the push toggle in the site works without errors.
@@ -492,6 +507,10 @@ ipcMain.on(IPC_CHANNELS.KEYBINDS_RECORDING_START, () => {
 ipcMain.on(IPC_CHANNELS.KEYBINDS_RECORDING_STOP, () => {
   isRecordingKeybind = false;
   buildApplicationMenu();
+});
+
+ipcMain.on(IPC_CHANNELS.RETRY_LOAD, () => {
+  mainWindow?.loadURL(APP_CONFIG.TARGET_URL);
 });
 
 // --- Application Menu ---
