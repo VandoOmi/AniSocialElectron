@@ -131,7 +131,7 @@ export function getSettingsInjectionScript(appVersion: string): string {
     if (!document.getElementById(styleId)) {
       var style = document.createElement('style');
       style.id = styleId;
-      style.textContent = '[data-electron-panel-active] button[role="tab"]:not([data-electron-settings-tab]) { color: var(--color-text-secondary) !important; } [data-electron-panel-active] button[role="tab"]:not([data-electron-settings-tab]) .bg-accent-primary { display: none !important; }';
+      style.textContent = '[data-electron-panel-active] button[role="tab"]:not([data-electron-settings-tab]) { color: var(--color-text-secondary) !important; } [data-electron-panel-active] button[role="tab"]:not([data-electron-settings-tab]) .bg-accent-primary { display: none !important; } [data-electron-panel-active] ~ *:not([data-electron-settings-panel]) { display: none !important; }';
       document.head.appendChild(style);
     }
     tablist.setAttribute('data-electron-panel-active', 'true');
