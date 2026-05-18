@@ -25,7 +25,11 @@ function persist(): void {
   fs.writeFileSync(settingsPath, JSON.stringify(cache, null, 2), 'utf-8');
 }
 
-type ChangeCallback<K extends SettingsKey> = (newValue: SettingsSchema[K], oldValue: SettingsSchema[K]) => void;
+type ChangeCallback<K extends SettingsKey> = (
+  newValue: SettingsSchema[K],
+  oldValue: SettingsSchema[K],
+) => void;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const listeners = new Map<SettingsKey, Set<ChangeCallback<any>>>();
 
 export function getSettings(): SettingsSchema {
@@ -39,6 +43,7 @@ export function getSetting<K extends SettingsKey>(key: K): SettingsSchema[K] {
 export function setSetting<K extends SettingsKey>(key: K, value: SettingsSchema[K]): void {
   const store = loadCache();
   const oldValue = store[key];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (store as any)[key] = value;
   persist();
   const callbacks = listeners.get(key);

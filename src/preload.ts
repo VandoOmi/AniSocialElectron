@@ -34,12 +34,14 @@ window.addEventListener('message', (event) => {
 
   // Settings: set a single setting
   if (event.data.type === '__electron_settings_set__') {
-    ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SET, {
-      key: event.data.key,
-      value: event.data.value,
-    }).then((result) => {
-      window.postMessage({ type: '__electron_settings_updated__', ...result }, '*');
-    });
+    ipcRenderer
+      .invoke(IPC_CHANNELS.SETTINGS_SET, {
+        key: event.data.key,
+        value: event.data.value,
+      })
+      .then((result) => {
+        window.postMessage({ type: '__electron_settings_updated__', ...result }, '*');
+      });
   }
 
   // Keybinds: get all actions with effective accelerators

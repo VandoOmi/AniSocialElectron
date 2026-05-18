@@ -9,10 +9,13 @@ export function initSettingsIpc(): void {
     return getSettings();
   });
 
-  ipcMain.handle(IPC_CHANNELS.SETTINGS_SET, (_event, payload: { key: SettingsKey; value: SettingsSchema[SettingsKey] }) => {
-    setSetting(payload.key, payload.value as any);
-    return { key: payload.key, value: payload.value };
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.SETTINGS_SET,
+    <K extends SettingsKey>(_event: unknown, payload: { key: K; value: SettingsSchema[K] }) => {
+      setSetting(payload.key, payload.value);
+      return { key: payload.key, value: payload.value };
+    },
+  );
 
   ipcMain.handle(IPC_CHANNELS.KEYBINDS_GET_ACTIONS, () => {
     return getActionsWithAccelerators();
