@@ -46,13 +46,17 @@ function getLoginItemSettings(openAtLogin: boolean) {
 
 function playNotificationSound(): void {
   if (!getSetting('notifications.sound')) return;
-  const soundPath = path.join(__dirname, '..', 'assets', 'notification.wav').replace(/\\/g, '/');
+  const customSound = getSetting('notifications.customSound');
+  const soundFile = customSound
+    ? customSound.replace(/\\/g, '/')
+    : path.join(__dirname, '..', 'assets', 'notification.wav').replace(/\\/g, '/');
+  const volume = Math.max(0, Math.min(1, getSetting('notifications.volume') / 100));
   mainWindow?.webContents
     .executeJavaScript(
       `
     (function() {
-      var a = new Audio('file:///' + ${JSON.stringify(soundPath)});
-      a.volume = 0.5;
+      var a = new Audio(${JSON.stringify('file:///' + soundFile)});
+      a.volume = ${volume};
       a.play().catch(function() {});
     })();
   `,
