@@ -24,7 +24,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.8.0",
-    "electron": "^35.7.5",
+    "electron": "^42.1.0",
     "electron-builder": "^26.0.0",
     "eslint": "^10.4.0",
     "prettier": "^3.8.3",
