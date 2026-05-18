@@ -3,6 +3,7 @@ export interface SettingsSchema {
   'general.closeToTray': boolean;
   'general.autoStart': boolean;
   'general.hardwareAcceleration': boolean;
+  'general.discordRPC': boolean;
   'notifications.enabled': boolean;
   'notifications.sound': boolean;
   'notifications.volume': number;
@@ -27,6 +28,7 @@ export const SETTINGS_DEFAULTS: SettingsSchema = {
   'general.closeToTray': true,
   'general.autoStart': false,
   'general.hardwareAcceleration': true,
+  'general.discordRPC': true,
   'notifications.enabled': true,
   'notifications.sound': true,
   'notifications.volume': 80,

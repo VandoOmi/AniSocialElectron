@@ -22,6 +22,7 @@ import { initSettingsIpc } from './settings/ipc';
 import { getSetting, setSetting, onSettingChanged } from './settings/store';
 import { getSettingsInjectionScript } from './settings-inject';
 import { getEffectiveAccelerator } from './keybinds';
+import { initDiscordRPC, updateDiscordPresence, setDiscordRPCEnabled } from './discord-rpc';
 
 // --- Single Instance Lock ---
 
@@ -30,14 +31,50 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
       mainWindow.focus();
     }
+    // Handle protocol URL passed via command line (Linux/Windows)
+    const protocolUrl = argv.find((arg) => arg.startsWith('anisocial://'));
+    if (protocolUrl) handleProtocolUrl(protocolUrl);
   });
 }
+
+// --- Deep-Link Protocol Handler ---
+
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('anisocial', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('anisocial');
+}
+
+function handleProtocolUrl(url: string): void {
+  // anisocial://path/to/page → https://anisocial.de/path/to/page
+  try {
+    const parsed = new URL(url);
+    const targetPath = parsed.pathname + parsed.search + parsed.hash;
+    const fullUrl = APP_CONFIG.TARGET_URL + targetPath;
+    if (mainWindow) {
+      mainWindow.loadURL(fullUrl);
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  } catch {
+    // Invalid URL, ignore
+  }
+}
+
+// macOS: handle protocol via open-url event
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleProtocolUrl(url);
+});
 
 // --- State ---
 
@@ -275,6 +312,24 @@ function createWindow(): void {
     mainWindow?.webContents
       .executeJavaScript(getSettingsInjectionScript(app.getVersion()))
       .catch(() => {});
+  });
+
+  // Update Discord Rich Presence on navigation
+  mainWindow.webContents.on('did-navigate', (_event, url) => {
+    try {
+      const pagePath = new URL(url).pathname;
+      updateDiscordPresence(pagePath);
+    } catch {
+      // ignore invalid URLs
+    }
+  });
+  mainWindow.webContents.on('did-navigate-in-page', (_event, url) => {
+    try {
+      const pagePath = new URL(url).pathname;
+      updateDiscordPresence(pagePath);
+    } catch {
+      // ignore invalid URLs
+    }
   });
 
   // Fallback: also inject on dom-ready in case did-start-navigation was too early
@@ -787,6 +842,13 @@ app.whenReady().then(() => {
   createTray();
   initAutoUpdater();
 
+  // Handle protocol URL from initial launch (Linux/Windows)
+  const launchUrl = process.argv.find((arg) => arg.startsWith('anisocial://'));
+  if (launchUrl) handleProtocolUrl(launchUrl);
+
+  // Initialize Discord Rich Presence
+  initDiscordRPC();
+
   // Apply autostart setting
   app.setLoginItemSettings(getLoginItemSettings(getSetting('general.autoStart')));
 
@@ -801,6 +863,10 @@ app.whenReady().then(() => {
 
   onSettingChanged('notifications.pollingIntervalSec', () => {
     restartPolling();
+  });
+
+  onSettingChanged('general.discordRPC', (value) => {
+    setDiscordRPCEnabled(value);
   });
 
   // Rebuild menu when keybinds or quick-nav slots change

@@ -23,6 +23,7 @@
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/discord-rpc": "^4.0.10",
     "@types/node": "^25.8.0",
     "electron": "^42.1.0",
     "electron-builder": "^26.0.0",
@@ -32,6 +33,7 @@
     "typescript-eslint": "^8.59.3"
   },
   "dependencies": {
+    "discord-rpc": "^4.0.1",
     "electron-updater": "^6.8.3",
     "electron-window-state": "^5.0.3"
   },
@@ -59,7 +61,10 @@
         "tar.gz"
       ],
       "icon": "assets/icon.png",
-      "category": "Network"
+      "category": "Network",
+      "mimeTypes": [
+        "x-scheme-handler/anisocial"
+      ]
     },
     "win": {
       "target": "nsis",
@@ -67,7 +72,15 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "protocols": [
+        {
+          "name": "AniSocial",
+          "schemes": [
+            "anisocial"
+          ]
+        }
+      ]
     }
   }
 }

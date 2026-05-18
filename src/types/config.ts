@@ -8,6 +8,7 @@ export const APP_CONFIG = {
   MAX_BADGE_COUNT: 99,
   UPDATE_INTERVAL_MS: 4 * 60 * 60 * 1000, // 4 hours
   RELEASES_URL: 'https://github.com/VandoOmi/AniSocialDesktop/releases',
+  DISCORD_CLIENT_ID: '1505977655009214675',
   WINDOW: {
     DEFAULT_WIDTH: 1280,
     DEFAULT_HEIGHT: 800,
