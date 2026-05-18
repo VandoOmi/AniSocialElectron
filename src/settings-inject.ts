@@ -52,6 +52,8 @@ export function getSettingsInjectionScript(appVersion: string): string {
       items: [
         { key: 'notifications.enabled', label: 'Desktop-Benachrichtigungen', description: 'Desktop-Benachrichtigungen für neue Aktivitäten anzeigen.', type: 'toggle', icon: ICONS.bellRing },
         { key: 'notifications.sound', label: 'Benachrichtigungston', description: 'Ton bei neuen Benachrichtigungen abspielen.', type: 'toggle', icon: ICONS.volume },
+        { key: 'notifications.volume', label: 'Lautstärke', description: 'Lautstärke des Benachrichtigungstons (0–100%).', type: 'range', min: 0, max: 100, step: 5, icon: ICONS.volume, disabledWhen: 'notifications.sound:false' },
+        { key: 'notifications.customSound', label: 'Eigener Sound', description: 'Eigene Audio-Datei als Benachrichtigungston verwenden. Leer = Standard.', type: 'file', icon: ICONS.volume, disabledWhen: 'notifications.sound:false' },
         { key: 'notifications.pollingIntervalSec', label: 'Abfrage-Intervall', description: 'Wie oft nach neuen Benachrichtigungen geprüft wird (in Sekunden).', type: 'number', min: 10, max: 300, step: 5, icon: ICONS.timer },
       ]
     },
@@ -101,6 +103,12 @@ export function getSettingsInjectionScript(appVersion: string): string {
     }
     if (event.data && event.data.type === '__electron_settings_updated__') {
       currentSettings[event.data.key] = event.data.value;
+    }
+    if (event.data && event.data.type === '__electron_sound_file_picked__') {
+      if (event.data.filePath) {
+        saveSetting('notifications.customSound', event.data.filePath);
+        renderSettingsPanel();
+      }
     }
   });
 
@@ -198,7 +206,17 @@ export function getSettingsInjectionScript(appVersion: string): string {
         var value = currentSettings[item.key];
         if (value === undefined) value = getDefault(item.key);
 
-        html += '<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-bg-surface rounded-md border border-white/[0.04]">';
+        var isDisabled = false;
+        if (item.disabledWhen) {
+          var parts = item.disabledWhen.split(':');
+          var depKey = parts[0];
+          var depVal = parts[1] === 'false' ? false : parts[1] === 'true' ? true : parts[1];
+          var depCurrent = currentSettings[depKey];
+          if (depCurrent === undefined) depCurrent = getDefault(depKey);
+          isDisabled = depCurrent === depVal;
+        }
+
+        html += '<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-bg-surface rounded-md border border-white/[0.04]' + (isDisabled ? ' opacity-40 pointer-events-none' : '') + '">';
         html += '<div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 flex-1 min-w-0">';
         if (item.icon) {
           html += item.icon;
@@ -216,6 +234,10 @@ export function getSettingsInjectionScript(appVersion: string): string {
           html += renderToggle(item.key, value);
         } else if (item.type === 'number') {
           html += renderNumberInput(item.key, value, item.min, item.max, item.step);
+        } else if (item.type === 'range') {
+          html += renderRangeInput(item.key, value, item.min, item.max, item.step);
+        } else if (item.type === 'file') {
+          html += renderFileInput(item.key, value);
         }
         html += '</div>';
 
@@ -299,6 +321,26 @@ export function getSettingsInjectionScript(appVersion: string): string {
       'max="' + (max !== undefined ? max : '') + '" ' +
       'step="' + (step !== undefined ? step : 1) + '" ' +
       'class="w-20 px-3 py-1.5 rounded-md border border-line bg-bg-elevated text-text-primary text-sm text-center focus:outline-none focus:ring-2 focus:ring-accent-primary/30">';
+  }
+
+  function renderRangeInput(key, value, min, max, step) {
+    return '<div class="flex items-center gap-2">' +
+      '<input type="range" data-settings-key="' + key + '" value="' + value + '" ' +
+      'min="' + (min !== undefined ? min : 0) + '" ' +
+      'max="' + (max !== undefined ? max : 100) + '" ' +
+      'step="' + (step !== undefined ? step : 1) + '" ' +
+      'class="w-24 sm:w-32 accent-accent-primary cursor-pointer">' +
+      '<span data-range-display="' + key + '" class="text-text-secondary text-sm w-10 text-right">' + value + '%</span>' +
+      '</div>';
+  }
+
+  function renderFileInput(key, value) {
+    var displayName = value ? value.replace(/.*[\\/]/, '') : '';
+    return '<div class="flex items-center gap-2">' +
+      '<span data-file-display="' + key + '" class="text-text-secondary text-sm max-w-[150px] truncate" title="' + escapeAttr(value) + '">' + (displayName || 'Standard') + '</span>' +
+      '<button type="button" data-file-pick="' + key + '" class="px-3 py-1.5 rounded-md border border-line bg-bg-elevated text-text-primary text-sm cursor-pointer hover:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/30 transition-colors">Wählen</button>' +
+      (value ? '<button type="button" data-file-clear="' + key + '" class="text-xs text-text-secondary hover:text-accent-primary cursor-pointer transition-colors" title="Zurücksetzen">↺</button>' : '') +
+      '</div>';
   }
 
   var SETTINGS_DEFAULTS = ${defaultsJson};
@@ -409,6 +451,7 @@ export function getSettingsInjectionScript(appVersion: string): string {
     checkboxes.forEach(function(cb) {
       cb.addEventListener('change', function() {
         saveSetting(cb.getAttribute('data-settings-key'), cb.checked);
+        renderSettingsPanel();
       });
     });
 
@@ -420,6 +463,40 @@ export function getSettingsInjectionScript(appVersion: string): string {
         if (!isNaN(val)) {
           saveSetting(input.getAttribute('data-settings-key'), val);
         }
+      });
+    });
+
+    // Range inputs
+    var rangeInputs = panel.querySelectorAll('input[type="range"][data-settings-key]');
+    rangeInputs.forEach(function(input) {
+      var key = input.getAttribute('data-settings-key');
+      input.addEventListener('input', function() {
+        var display = panel.querySelector('[data-range-display="' + key + '"]');
+        if (display) display.textContent = input.value + '%';
+      });
+      input.addEventListener('change', function() {
+        var val = parseFloat(input.value);
+        if (!isNaN(val)) {
+          saveSetting(key, val);
+        }
+      });
+    });
+
+    // File picker buttons
+    var filePickBtns = panel.querySelectorAll('button[data-file-pick]');
+    filePickBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        window.postMessage({ type: '__electron_pick_sound_file__' }, '*');
+      });
+    });
+
+    // File clear buttons
+    var fileClearBtns = panel.querySelectorAll('button[data-file-clear]');
+    fileClearBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var key = btn.getAttribute('data-file-clear');
+        saveSetting(key, '');
+        renderSettingsPanel();
       });
     });
 

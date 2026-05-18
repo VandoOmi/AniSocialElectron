@@ -9,6 +9,7 @@ const IPC_CHANNELS = {
   KEYBINDS_GET_ACTIONS: 'keybinds:get-actions',
   KEYBINDS_RECORDING_START: 'keybinds:recording-start',
   KEYBINDS_RECORDING_STOP: 'keybinds:recording-stop',
+  PICK_SOUND_FILE: 'settings:pick-sound-file',
 } as const;
 
 // Listen for notification requests from the main world (injected via executeJavaScript).
@@ -59,5 +60,12 @@ window.addEventListener('message', (event) => {
   // Keybinds: stop recording (re-enables menu accelerators)
   if (event.data.type === '__electron_keybinds_recording_stop__') {
     ipcRenderer.send(IPC_CHANNELS.KEYBINDS_RECORDING_STOP);
+  }
+
+  // Settings: pick a sound file via native dialog
+  if (event.data.type === '__electron_pick_sound_file__') {
+    ipcRenderer.invoke(IPC_CHANNELS.PICK_SOUND_FILE).then((filePath) => {
+      window.postMessage({ type: '__electron_sound_file_picked__', filePath }, '*');
+    });
   }
 });

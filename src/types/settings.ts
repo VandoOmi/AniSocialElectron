@@ -5,6 +5,8 @@ export interface SettingsSchema {
   'general.hardwareAcceleration': boolean;
   'notifications.enabled': boolean;
   'notifications.sound': boolean;
+  'notifications.volume': number;
+  'notifications.customSound': string;
   'notifications.pollingIntervalSec': number;
   'appearance.zoomLevel': number;
   'keybinds.overrides': Record<string, string>;
@@ -27,6 +29,8 @@ export const SETTINGS_DEFAULTS: SettingsSchema = {
   'general.hardwareAcceleration': true,
   'notifications.enabled': true,
   'notifications.sound': true,
+  'notifications.volume': 80,
+  'notifications.customSound': '',
   'notifications.pollingIntervalSec': 30,
   'appearance.zoomLevel': 0,
   'keybinds.overrides': {},
