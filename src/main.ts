@@ -23,6 +23,22 @@ import { getSetting, setSetting, onSettingChanged } from './settings/store';
 import { getSettingsInjectionScript } from './settings-inject';
 import { getEffectiveAccelerator } from './keybinds';
 
+// --- Single Instance Lock ---
+
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 // --- State ---
 
 let mainWindow: BrowserWindow | null = null;
