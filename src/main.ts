@@ -237,7 +237,7 @@ function createWindow(): void {
   mainWindow.webContents.on('did-start-navigation', () => {
     mainWindow?.webContents.executeJavaScript(getNotificationMockScript()).catch(() => {});
     mainWindow?.webContents.executeJavaScript(getPushMockScript()).catch(() => {});
-    mainWindow?.webContents.executeJavaScript(getSettingsInjectionScript()).catch(() => {});
+    mainWindow?.webContents.executeJavaScript(getSettingsInjectionScript(app.getVersion())).catch(() => {});
   });
 
   // Fallback: also inject on dom-ready in case did-start-navigation was too early
@@ -248,7 +248,7 @@ function createWindow(): void {
     mainWindow?.webContents.executeJavaScript(getPushMockScript()).catch((e) => {
       console.error('[PushMock] Injection failed on dom-ready:', e);
     });
-    mainWindow?.webContents.executeJavaScript(getSettingsInjectionScript()).catch((e) => {
+    mainWindow?.webContents.executeJavaScript(getSettingsInjectionScript(app.getVersion())).catch((e) => {
       console.error('[SettingsInject] Injection failed on dom-ready:', e);
     });
 

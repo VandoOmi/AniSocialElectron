@@ -6,7 +6,7 @@ import { KEYBIND_ACTIONS } from './keybinds';
  * Injects a "Programm" tab into the existing tab bar with app-specific settings.
  * Uses a declarative registry — add a new setting by adding one object to SETTINGS_REGISTRY.
  */
-export function getSettingsInjectionScript(): string {
+export function getSettingsInjectionScript(appVersion: string): string {
   const defaultsJson = JSON.stringify(SETTINGS_DEFAULTS);
   const keybindActionsJson = JSON.stringify(KEYBIND_ACTIONS);
 
@@ -277,7 +277,7 @@ export function getSettingsInjectionScript(): string {
     html += '</div>';
 
     // Version info
-    html += '<div class="text-center text-xs text-text-secondary py-2">AniSocial Desktop</div>';
+    html += '<div class="text-center text-xs text-text-secondary py-2">AniSocial Desktop v' + ${JSON.stringify(appVersion)} + '</div>';
 
     panel.innerHTML = html;
 
