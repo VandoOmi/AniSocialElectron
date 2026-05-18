@@ -32,7 +32,10 @@ let isQuitting = false;
 // --- Autostart Helper ---
 
 function getLoginItemSettings(openAtLogin: boolean) {
-  const settings: Parameters<typeof app.setLoginItemSettings>[0] = { openAtLogin, name: APP_CONFIG.APP_NAME };
+  const settings: Parameters<typeof app.setLoginItemSettings>[0] = {
+    openAtLogin,
+    name: APP_CONFIG.APP_NAME,
+  };
   if (process.platform === 'linux' && process.env.APPIMAGE) {
     settings.path = process.env.APPIMAGE;
   }
@@ -44,13 +47,17 @@ function getLoginItemSettings(openAtLogin: boolean) {
 function playNotificationSound(): void {
   if (!getSetting('notifications.sound')) return;
   const soundPath = path.join(__dirname, '..', 'assets', 'notification.wav').replace(/\\/g, '/');
-  mainWindow?.webContents.executeJavaScript(`
+  mainWindow?.webContents
+    .executeJavaScript(
+      `
     (function() {
       var a = new Audio('file:///' + ${JSON.stringify(soundPath)});
       a.volume = 0.5;
       a.play().catch(function() {});
     })();
-  `).catch(() => {});
+  `,
+    )
+    .catch(() => {});
 }
 let unreadCount = 0;
 let originalTrayIcon: NativeImage | null = null;
