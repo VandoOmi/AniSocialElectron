@@ -10,6 +10,7 @@ const IPC_CHANNELS = {
   KEYBINDS_RECORDING_START: 'keybinds:recording-start',
   KEYBINDS_RECORDING_STOP: 'keybinds:recording-stop',
   PICK_SOUND_FILE: 'settings:pick-sound-file',
+  RETRY_LOAD: 'app:retry-load',
 } as const;
 
 // Listen for notification requests from the main world (injected via executeJavaScript).
@@ -67,5 +68,10 @@ window.addEventListener('message', (event) => {
     ipcRenderer.invoke(IPC_CHANNELS.PICK_SOUND_FILE).then((filePath) => {
       window.postMessage({ type: '__electron_sound_file_picked__', filePath }, '*');
     });
+  }
+
+  // Offline page: retry loading the app
+  if (event.data.type === '__electron_retry_load__') {
+    ipcRenderer.send(IPC_CHANNELS.RETRY_LOAD);
   }
 });
