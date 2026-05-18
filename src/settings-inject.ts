@@ -126,24 +126,27 @@ export function getSettingsInjectionScript(): string {
   }
 
   function activateProgrammTab(tablist, tab) {
-    // Deactivate all other tabs
-    var allTabs = tablist.querySelectorAll('button[role="tab"]');
-    allTabs.forEach(function(t) {
-      t.setAttribute('aria-selected', 'false');
-      t.className = 'flex items-center justify-center gap-2 px-3 md:px-4 py-3 font-medium transition-colors relative flex-shrink-0 whitespace-nowrap cursor-pointer text-text-secondary hover:text-text-primary';
-      // Remove underline indicators
-      var indicator = t.querySelector('.bg-accent-primary');
-      if (indicator) indicator.remove();
-    });
+    // Visually deactivate native tabs via CSS override (don't touch aria-selected to avoid breaking React)
+    var styleId = '__electron-tab-override-style';
+    if (!document.getElementById(styleId)) {
+      var style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = '[data-electron-panel-active] button[role="tab"]:not([data-electron-settings-tab]) { color: var(--color-text-secondary) !important; } [data-electron-panel-active] button[role="tab"]:not([data-electron-settings-tab]) .bg-accent-primary { display: none !important; }';
+      document.head.appendChild(style);
+    }
+    tablist.setAttribute('data-electron-panel-active', 'true');
 
     // Activate our tab
     tab.setAttribute('aria-selected', 'true');
     tab.className = 'flex items-center justify-center gap-2 px-3 md:px-4 py-3 font-medium transition-colors relative flex-shrink-0 whitespace-nowrap cursor-pointer text-accent-primary';
-    var indicator = document.createElement('div');
-    indicator.className = 'absolute bottom-0 left-0 right-0 h-0.5 bg-accent-primary';
-    tab.appendChild(indicator);
+    var existingIndicator = tab.querySelector('.bg-accent-primary');
+    if (!existingIndicator) {
+      var indicator = document.createElement('div');
+      indicator.className = 'absolute bottom-0 left-0 right-0 h-0.5 bg-accent-primary';
+      tab.appendChild(indicator);
+    }
 
-    // Replace content panel
+    // Show our panel as overlay
     showSettingsPanel(tablist);
   }
 
@@ -152,19 +155,18 @@ export function getSettingsInjectionScript(): string {
     var container = tablist.parentElement;
     if (!container) return;
 
-    // Remove existing content panels (everything after tablist within the container)
-    var children = Array.from(container.children);
-    var tablistIndex = children.indexOf(tablist);
-    for (var i = tablistIndex + 1; i < children.length; i++) {
-      children[i].style.display = 'none';
+    // Ensure container has relative positioning for our overlay
+    if (getComputedStyle(container).position === 'static') {
+      container.style.position = 'relative';
     }
 
-    // Create or show our panel
+    // Create or show our panel as an overlay (don't hide native panels!)
     var panel = container.querySelector('[data-electron-settings-panel]');
     if (!panel) {
       panel = document.createElement('div');
       panel.setAttribute('data-electron-settings-panel', 'true');
       panel.className = 'space-y-6';
+      panel.style.cssText = 'position: relative; z-index: 10; background: var(--color-bg-primary, #0a0a0f);';
       container.appendChild(panel);
     }
     panel.style.display = '';
@@ -479,19 +481,23 @@ export function getSettingsInjectionScript(): string {
       var tab = e.target.closest('button[role="tab"]');
       if (!tab || tab.hasAttribute('data-electron-settings-tab')) return;
 
-      // A native tab was clicked — hide our panel, restore original panels
+      // A native tab was clicked — just hide our overlay panel
       var container = tablist.parentElement;
       if (!container) return;
 
       var panel = container.querySelector('[data-electron-settings-panel]');
       if (panel) panel.style.display = 'none';
 
-      var children = Array.from(container.children);
-      var tablistIndex = children.indexOf(tablist);
-      for (var i = tablistIndex + 1; i < children.length; i++) {
-        if (!children[i].hasAttribute('data-electron-settings-panel')) {
-          children[i].style.display = '';
-        }
+      // Remove our tab override styling so native tabs look normal again
+      tablist.removeAttribute('data-electron-panel-active');
+
+      // Deactivate our tab visually
+      var electronTab = tablist.querySelector('[data-electron-settings-tab]');
+      if (electronTab) {
+        electronTab.setAttribute('aria-selected', 'false');
+        electronTab.className = 'flex items-center justify-center gap-2 px-3 md:px-4 py-3 font-medium transition-colors relative flex-shrink-0 whitespace-nowrap cursor-pointer text-text-secondary hover:text-text-primary';
+        var indicator = electronTab.querySelector('.bg-accent-primary');
+        if (indicator) indicator.remove();
       }
     });
   }
