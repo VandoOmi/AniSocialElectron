@@ -28,6 +28,30 @@ import { getEffectiveAccelerator } from './keybinds';
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
+
+// --- Autostart Helper ---
+
+function getLoginItemSettings(openAtLogin: boolean) {
+  const settings: Parameters<typeof app.setLoginItemSettings>[0] = { openAtLogin, name: APP_CONFIG.APP_NAME };
+  if (process.platform === 'linux' && process.env.APPIMAGE) {
+    settings.path = process.env.APPIMAGE;
+  }
+  return settings;
+}
+
+// --- Notification Sound ---
+
+function playNotificationSound(): void {
+  if (!getSetting('notifications.sound')) return;
+  const soundPath = path.join(__dirname, '..', 'assets', 'notification.wav').replace(/\\/g, '/');
+  mainWindow?.webContents.executeJavaScript(`
+    (function() {
+      var a = new Audio('file:///' + ${JSON.stringify(soundPath)});
+      a.volume = 0.5;
+      a.play().catch(function() {});
+    })();
+  `).catch(() => {});
+}
 let unreadCount = 0;
 let originalTrayIcon: NativeImage | null = null;
 
@@ -403,7 +427,7 @@ ipcMain.on(IPC_CHANNELS.SHOW_NOTIFICATION, (_event, payload: NotificationPayload
     title: payload.title || APP_CONFIG.APP_NAME,
     body: payload.body || '',
     icon: payload.icon || path.join(__dirname, '..', 'assets', 'icon.png'),
-    silent: !getSetting('notifications.sound'),
+    silent: true,
   });
 
   notification.on('click', () => {
@@ -414,6 +438,7 @@ ipcMain.on(IPC_CHANNELS.SHOW_NOTIFICATION, (_event, payload: NotificationPayload
   });
 
   notification.show();
+  playNotificationSound();
 });
 
 ipcMain.on(IPC_CHANNELS.UPDATE_BADGE, () => {
@@ -713,11 +738,11 @@ app.whenReady().then(() => {
   initAutoUpdater();
 
   // Apply autostart setting
-  app.setLoginItemSettings({ openAtLogin: getSetting('general.autoStart') });
+  app.setLoginItemSettings(getLoginItemSettings(getSetting('general.autoStart')));
 
   // React to settings changes
   onSettingChanged('general.autoStart', (value) => {
-    app.setLoginItemSettings({ openAtLogin: value });
+    app.setLoginItemSettings(getLoginItemSettings(value));
   });
 
   onSettingChanged('appearance.zoomLevel', (value) => {
@@ -745,7 +770,7 @@ app.whenReady().then(() => {
         title,
         body,
         icon: path.join(__dirname, '..', 'assets', 'icon.png'),
-        silent: !getSetting('notifications.sound'),
+        silent: true,
       });
 
       notification.on('click', () => {
@@ -757,6 +782,7 @@ app.whenReady().then(() => {
       });
 
       notification.show();
+      playNotificationSound();
     }
 
     // Update badge
@@ -768,7 +794,9 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  // Do not quit — app stays in tray
+  if (!getSetting('general.closeToTray')) {
+    app.quit();
+  }
 });
 
 app.on('activate', () => {
