@@ -4,6 +4,16 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -12,7 +22,43 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate next version
+        id: tag
+        run: |
+          CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          CURRENT="${CURRENT#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          case "${{ inputs.bump }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Next version: $TAG"
+
+      - name: Create and push tag
+        run: |
+          git tag "${{ steps.tag.outputs.tag }}"
+          git push origin "${{ steps.tag.outputs.tag }}"
+
   build:
+    needs: prepare
+    if: always() && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped')
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
     strategy:
       matrix:
         include:
@@ -27,17 +73,30 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [ -n "${{ needs.prepare.outputs.tag }}" ]; then
+            VERSION="${{ needs.prepare.outputs.tag }}"
+          else
+            VERSION="${GITHUB_REF_NAME}"
+          fi
+          echo "version=${VERSION#v}" >> "$GITHUB_OUTPUT"
+          echo "tag=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Sync version from tag
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          npm version "${{ steps.version.outputs.version }}" --no-git-tag-version --allow-same-version
 
       - name: Install dependencies
         run: npm ci
@@ -71,6 +130,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ needs.build.outputs.tag }}
 
     steps:
       - uses: actions/download-artifact@v4
@@ -79,33 +140,37 @@ jobs:
           merge-multiple: true
 
       - name: Delete existing release if present
-        run: gh release delete "$GITHUB_REF_NAME" --yes --cleanup-tag=false || true
+        run: gh release delete "$RELEASE_TAG" --yes --cleanup-tag=false || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: artifacts/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   aur-publish:
-    needs: release
+    needs: [build, release]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ needs.build.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Extract version from tag
         id: version
-        run: echo "pkgver=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: echo "pkgver=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Get sha256sum of .pacman file
         id: sha256
         run: |
-          url="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/anisocial-desktop-${{ steps.version.outputs.pkgver }}.pacman"
+          url="https://github.com/${{ github.repository }}/releases/download/${RELEASE_TAG}/anisocial-desktop-${{ steps.version.outputs.pkgver }}.pacman"
           echo "Downloading: $url"
           curl -fSL "$url" -o package.pacman
           sha256=$(sha256sum package.pacman | awk '{print $1}')

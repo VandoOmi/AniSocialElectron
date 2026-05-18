@@ -62,10 +62,12 @@ function createWindow(): void {
   mainWindow.loadURL(APP_CONFIG.TARGET_URL);
 
   // Grant notification and push permissions so the web app can activate them
-  mainWindow.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
-    const allowed = ['notifications', 'push'];
-    callback(allowed.includes(permission));
-  });
+  mainWindow.webContents.session.setPermissionRequestHandler(
+    (_webContents, permission, callback) => {
+      const allowed = ['notifications', 'push'];
+      callback(allowed.includes(permission));
+    },
+  );
 
   mainWindow.webContents.session.setPermissionCheckHandler((_webContents, permission) => {
     const allowed = ['notifications', 'push'];
@@ -248,8 +250,14 @@ function createWindow(): void {
     // Map key to Electron accelerator format
     let mappedKey = key;
     const keyMap: Record<string, string> = {
-      'ArrowLeft': 'Left', 'ArrowRight': 'Right', 'ArrowUp': 'Up', 'ArrowDown': 'Down',
-      ' ': 'Space', 'Enter': 'Return', '+': 'Plus', 'Tab': 'Tab',
+      ArrowLeft: 'Left',
+      ArrowRight: 'Right',
+      ArrowUp: 'Up',
+      ArrowDown: 'Down',
+      ' ': 'Space',
+      Enter: 'Return',
+      '+': 'Plus',
+      Tab: 'Tab',
     };
     if (keyMap[key]) {
       mappedKey = keyMap[key];
@@ -268,9 +276,11 @@ function createWindow(): void {
     const accelerator = parts.join('+');
 
     // Send captured key to renderer via executeJavaScript
-    mainWindow?.webContents.executeJavaScript(
-      `window.postMessage({ type: '__electron_keybind_captured__', accelerator: ${JSON.stringify(accelerator)} }, '*');`
-    ).catch(() => {});
+    mainWindow?.webContents
+      .executeJavaScript(
+        `window.postMessage({ type: '__electron_keybind_captured__', accelerator: ${JSON.stringify(accelerator)} }, '*');`,
+      )
+      .catch(() => {});
   });
 
   // Minimize to tray instead of closing (respects closeToTray setting)
@@ -333,10 +343,7 @@ function createWindow(): void {
         { role: 'selectAll' },
       );
     } else if (params.selectionText) {
-      menuItems.push(
-        { role: 'copy' },
-        { role: 'selectAll' },
-      );
+      menuItems.push({ role: 'copy' }, { role: 'selectAll' });
     }
 
     if (params.linkURL) {
@@ -435,9 +442,11 @@ ipcMain.on(IPC_CHANNELS.KEYBINDS_RECORDING_STOP, () => {
 
 function buildApplicationMenu(): void {
   const quickNavItems: MenuItemConstructorOptions[] = [];
+  type SlotPath = `quicknav.slot${1 | 2 | 3 | 4 | 5}.path`;
+  type SlotLabel = `quicknav.slot${1 | 2 | 3 | 4 | 5}.label`;
   for (let i = 1; i <= 5; i++) {
-    const slotPath = getSetting(`quicknav.slot${i}.path` as keyof import('./types/settings').SettingsSchema) as string;
-    const slotLabel = getSetting(`quicknav.slot${i}.label` as keyof import('./types/settings').SettingsSchema) as string;
+    const slotPath = getSetting(`quicknav.slot${i}.path` as SlotPath);
+    const slotLabel = getSetting(`quicknav.slot${i}.label` as SlotLabel);
     const accelerator = getEffectiveAccelerator(`quicknav.slot${i}`);
 
     if (slotPath) {
@@ -458,8 +467,10 @@ function buildApplicationMenu(): void {
             const currentUrl = mainWindow.webContents.getURL();
             const url = new URL(currentUrl);
             const pagePath = url.pathname;
-            setSetting(`quicknav.slot${i}.path` as keyof import('./types/settings').SettingsSchema, pagePath as any);
-            setSetting(`quicknav.slot${i}.label` as keyof import('./types/settings').SettingsSchema, '' as any);
+            type SlotPath = `quicknav.slot${1 | 2 | 3 | 4 | 5}.path`;
+            type SlotLabel = `quicknav.slot${1 | 2 | 3 | 4 | 5}.label`;
+            setSetting(`quicknav.slot${i}.path` as SlotPath, pagePath);
+            setSetting(`quicknav.slot${i}.label` as SlotLabel, '');
 
             const notification = new Notification({
               title: APP_CONFIG.APP_NAME,
@@ -468,7 +479,9 @@ function buildApplicationMenu(): void {
               silent: true,
             });
             notification.show();
-          } catch { /* ignore invalid URLs */ }
+          } catch {
+            /* ignore invalid URLs */
+          }
         },
       });
     }
@@ -620,9 +633,8 @@ function showWindow(): void {
 // --- Unread Badge (Cross-Platform) ---
 
 function createBadgeIcon(count: number): NativeImage {
-  const text = count > APP_CONFIG.MAX_BADGE_COUNT
-    ? `${APP_CONFIG.MAX_BADGE_COUNT}+`
-    : String(count);
+  const text =
+    count > APP_CONFIG.MAX_BADGE_COUNT ? `${APP_CONFIG.MAX_BADGE_COUNT}+` : String(count);
 
   const svg = `
     <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg">
@@ -637,7 +649,9 @@ function createBadgeIcon(count: number): NativeImage {
 function updateUnreadBadge(count: number): void {
   // Tooltip on all platforms
   if (tray) {
-    tray.setToolTip(count > 0 ? `${APP_CONFIG.APP_NAME} (${count} ungelesen)` : APP_CONFIG.APP_NAME);
+    tray.setToolTip(
+      count > 0 ? `${APP_CONFIG.APP_NAME} (${count} ungelesen)` : APP_CONFIG.APP_NAME,
+    );
   }
 
   // Platform-specific badge
@@ -666,9 +680,8 @@ function updateUnreadBadge(count: number): void {
 }
 
 function createTrayBadgeIcon(count: number): NativeImage {
-  const text = count > APP_CONFIG.MAX_BADGE_COUNT
-    ? `${APP_CONFIG.MAX_BADGE_COUNT}+`
-    : String(count);
+  const text =
+    count > APP_CONFIG.MAX_BADGE_COUNT ? `${APP_CONFIG.MAX_BADGE_COUNT}+` : String(count);
 
   // 22x22 tray icon with badge overlay (red circle in top-right)
   const svg = `
@@ -717,9 +730,11 @@ app.whenReady().then(() => {
 
   // Rebuild menu when keybinds or quick-nav slots change
   onSettingChanged('keybinds.overrides', () => buildApplicationMenu());
+  type SlotPathKey = `quicknav.slot${1 | 2 | 3 | 4 | 5}.path`;
+  type SlotLabelKey = `quicknav.slot${1 | 2 | 3 | 4 | 5}.label`;
   for (let i = 1; i <= 5; i++) {
-    onSettingChanged(`quicknav.slot${i}.path` as keyof import('./types/settings').SettingsSchema, () => buildApplicationMenu());
-    onSettingChanged(`quicknav.slot${i}.label` as keyof import('./types/settings').SettingsSchema, () => buildApplicationMenu());
+    onSettingChanged(`quicknav.slot${i}.path` as SlotPathKey, () => buildApplicationMenu());
+    onSettingChanged(`quicknav.slot${i}.label` as SlotLabelKey, () => buildApplicationMenu());
   }
 
   // Start notification polling (with WebSocket upgrade when available)

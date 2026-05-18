@@ -48,10 +48,7 @@ export function initAutoUpdater(): void {
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
-    showUpdateNotification(
-      'Update verfügbar',
-      `Version ${info.version} wird heruntergeladen…`,
-    );
+    showUpdateNotification('Update verfügbar', `Version ${info.version} wird heruntergeladen…`);
   });
 
   autoUpdater.on('update-downloaded', (info: UpdateInfo) => {

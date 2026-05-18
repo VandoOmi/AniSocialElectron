@@ -28,23 +28,23 @@ interface NotificationsResponse {
 type OnNotificationCallback = (title: string, body: string, count: number) => void;
 
 let onNotification: OnNotificationCallback | null = null;
-let seenIds: Set<string> = new Set();
+const seenIds: Set<string> = new Set();
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let isFirstPoll = true;
 
 function getUnreadCount(notifications: AniNotification[]): number {
-  return notifications.filter(n => !n.isRead).length;
+  return notifications.filter((n) => !n.isRead).length;
 }
 
 async function getAuthToken(): Promise<string | null> {
   try {
     const allCookies = await session.defaultSession.cookies.get({ domain: '.anisocial.de' });
-    const tokenCookie = allCookies.find(c => c.name === 'token');
+    const tokenCookie = allCookies.find((c) => c.name === 'token');
     if (tokenCookie) return tokenCookie.value;
 
     // Fallback: try without leading dot
     const allCookies2 = await session.defaultSession.cookies.get({ domain: 'anisocial.de' });
-    const tokenCookie2 = allCookies2.find(c => c.name === 'token');
+    const tokenCookie2 = allCookies2.find((c) => c.name === 'token');
     if (tokenCookie2) return tokenCookie2.value;
   } catch (e) {
     console.error('[Notifications] Failed to get auth token:', e);
@@ -54,23 +54,29 @@ async function getAuthToken(): Promise<string | null> {
 
 function fetchJson(url: string, token: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, {
-      headers: {
-        'Cookie': `token=${token}`,
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
+    const req = https.get(
+      url,
+      {
+        headers: {
+          Cookie: `token=${token}`,
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
       },
-    }, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          resolve(data);
-        } else {
-          reject(new Error(`HTTP ${res.statusCode}: ${data.substring(0, 200)}`));
-        }
-      });
-    });
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            resolve(data);
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}: ${data.substring(0, 200)}`));
+          }
+        });
+      },
+    );
     req.on('error', reject);
     req.end();
   });
@@ -104,7 +110,9 @@ async function pollNotifications(): Promise<void> {
         // Only update badge, don't show notification on first poll
         onNotification('', '', unreadCount);
       }
-      console.log(`[Notifications] Initial poll: ${notifications.length} total, ${unreadCount} unread`);
+      console.log(
+        `[Notifications] Initial poll: ${notifications.length} total, ${unreadCount} unread`,
+      );
       return;
     }
 
