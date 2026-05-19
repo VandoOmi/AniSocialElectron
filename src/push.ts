@@ -1,5 +1,4 @@
-import { app, session } from 'electron';
-import * as https from 'https';
+import { app, net, session } from 'electron';
 import { getSetting } from './settings/store';
 
 const API_BASE = 'https://api.anisocial.de/api/v1';
@@ -52,34 +51,21 @@ async function getAuthToken(): Promise<string | null> {
   return null;
 }
 
-function fetchJson(url: string, token: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const req = https.get(
-      url,
-      {
-        headers: {
-          Cookie: `token=${token}`,
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-      },
-      (res) => {
-        let data = '';
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-        res.on('end', () => {
-          if (res.statusCode === 200) {
-            resolve(data);
-          } else {
-            reject(new Error(`HTTP ${res.statusCode}: ${data.substring(0, 200)}`));
-          }
-        });
-      },
-    );
-    req.on('error', reject);
-    req.end();
+async function fetchJson(url: string, token: string): Promise<string> {
+  const response = await net.fetch(url, {
+    headers: {
+      Cookie: `token=${token}`,
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
   });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`HTTP ${response.status}: ${body.substring(0, 200)}`);
+  }
+
+  return response.text();
 }
 
 async function pollNotifications(): Promise<void> {
