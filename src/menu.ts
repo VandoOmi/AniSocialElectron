@@ -79,9 +79,7 @@ export function buildApplicationMenu(mainWindow: BrowserWindow | null): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-function buildNavigationSubmenu(
-  mainWindow: BrowserWindow | null,
-): MenuItemConstructorOptions[] {
+function buildNavigationSubmenu(mainWindow: BrowserWindow | null): MenuItemConstructorOptions[] {
   const quickNavItems = buildQuickNavItems(mainWindow);
 
   return [

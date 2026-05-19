@@ -2,6 +2,8 @@
 export function getNotificationMockScript(): string {
   return `
     (function() {
+      if (window.Notification && window.Notification.__electron_override__) return;
+
       function NotificationOverride(title, options) {
         options = options || {};
         window.postMessage({
@@ -22,6 +24,7 @@ export function getNotificationMockScript(): string {
         if (cb) cb('granted');
         return Promise.resolve('granted');
       };
+      NotificationOverride.__electron_override__ = true;
       Object.defineProperty(window, 'Notification', {
         value: NotificationOverride,
         writable: false,

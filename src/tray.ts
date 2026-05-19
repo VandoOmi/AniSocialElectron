@@ -42,10 +42,7 @@ export function createTray(callbacks: TrayCallbacks): void {
   tray.on('click', callbacks.onShow);
 }
 
-export function updateUnreadBadge(
-  mainWindow: Electron.BrowserWindow | null,
-  count: number,
-): void {
+export function updateUnreadBadge(mainWindow: Electron.BrowserWindow | null, count: number): void {
   updateTrayTooltip(count);
   updatePlatformBadge(mainWindow, count);
   updateTrayIcon(count);
@@ -60,9 +57,7 @@ function getTrayIconFile(): string {
 
 function updateTrayTooltip(count: number): void {
   if (!tray) return;
-  tray.setToolTip(
-    count > 0 ? `${APP_CONFIG.APP_NAME} (${count} ungelesen)` : APP_CONFIG.APP_NAME,
-  );
+  tray.setToolTip(count > 0 ? `${APP_CONFIG.APP_NAME} (${count} ungelesen)` : APP_CONFIG.APP_NAME);
 }
 
 function updatePlatformBadge(mainWindow: Electron.BrowserWindow | null, count: number): void {

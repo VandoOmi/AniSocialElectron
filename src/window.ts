@@ -80,11 +80,9 @@ export function createMainWindow(callbacks: WindowCallbacks): BrowserWindow {
 function setupPermissions(win: BrowserWindow): void {
   const allowedPermissions = ['notifications', 'push'];
 
-  win.webContents.session.setPermissionRequestHandler(
-    (_webContents, permission, callback) => {
-      callback(allowedPermissions.includes(permission));
-    },
-  );
+  win.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
+    callback(allowedPermissions.includes(permission));
+  });
 
   win.webContents.session.setPermissionCheckHandler((_webContents, permission) => {
     return allowedPermissions.includes(permission);

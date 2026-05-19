@@ -7,6 +7,8 @@ export function getPushMockScript(): string {
   return `
     (function() {
       if (typeof PushManager === 'undefined') return;
+      if (window.__electron_push_mock__) return;
+      window.__electron_push_mock__ = true;
 
       var endpoint = 'https://electron-desktop.local/push-mock';
       var p256dh = '';

@@ -203,7 +203,13 @@ app.whenReady().then(() => {
   initSettingsIpc();
   registerIpcHandlers();
   initWindow();
-  createTray({ onShow: showWindow, onQuit: () => { isQuitting = true; app.quit(); } });
+  createTray({
+    onShow: showWindow,
+    onQuit: () => {
+      isQuitting = true;
+      app.quit();
+    },
+  });
   buildApplicationMenu(mainWindow);
   initAutoUpdater();
 
