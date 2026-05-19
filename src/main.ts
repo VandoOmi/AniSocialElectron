@@ -1,14 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, Notification } from 'electron';
 import * as path from 'path';
 
-// Enable hot-reload in development
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('electron-reloader')(module, { watchRenderer: false });
-} catch {
-  // Production: module not available
-}
-
 import { APP_CONFIG } from './types/config';
 import { IPC_CHANNELS, type NotificationPayload } from './types/ipc';
 import { initAutoUpdater } from './updater';

@@ -24,11 +24,11 @@ Gebaut mit Electron, um AniSocial als native Desktop-Anwendung mit System-Benach
 
 Vorgefertigte Pakete gibt es auf der [Releases-Seite](https://github.com/VandoOmi/AniSocialDesktop/releases).
 
-| Plattform | Formate |
-|-----------|---------|
-| Linux | AppImage, deb, rpm, pacman, tar.gz |
-| Windows | NSIS Installer |
-| macOS | DMG |
+| Plattform | Formate                            |
+| --------- | ---------------------------------- |
+| Linux     | AppImage, deb, rpm, pacman, tar.gz |
+| Windows   | NSIS Installer                     |
+| macOS     | DMG                                |
 
 ### Selber bauen
 
@@ -69,33 +69,33 @@ Die fertigen Pakete landen im `release/`-Verzeichnis.
 
 Die Einstellungen werden als JSON in `userData/settings.json` gespeichert.
 
-| Kategorie | Einstellung | Standard |
-|-----------|-------------|----------|
-| Allgemein | In Tray minimieren | An |
-| Allgemein | Autostart | Aus |
-| Allgemein | Hardware-Beschleunigung | An |
-| Benachrichtigungen | Aktiviert | An |
-| Benachrichtigungen | Sound | An |
-| Benachrichtigungen | Lautstärke | 80 % |
-| Benachrichtigungen | Polling-Intervall | 30 s |
-| Darstellung | Zoom-Level | 0 |
+| Kategorie          | Einstellung             | Standard |
+| ------------------ | ----------------------- | -------- |
+| Allgemein          | In Tray minimieren      | An       |
+| Allgemein          | Autostart               | Aus      |
+| Allgemein          | Hardware-Beschleunigung | An       |
+| Benachrichtigungen | Aktiviert               | An       |
+| Benachrichtigungen | Sound                   | An       |
+| Benachrichtigungen | Lautstärke              | 80 %     |
+| Benachrichtigungen | Polling-Intervall       | 30 s     |
+| Darstellung        | Zoom-Level              | 0        |
 
 ## Tastenkürzel
 
 Alle Kürzel sind über die Einstellungen anpassbar. Hier die Standard-Belegung:
 
-| Kürzel | Aktion |
-|--------|--------|
-| `Ctrl+R` | Neu laden |
-| `Ctrl+Shift+R` | Hard Reload |
-| `Alt+←` | Zurück |
-| `Alt+→` | Vor |
-| `Ctrl+H` | Startseite |
-| `F11` | Vollbild |
-| `F12` | DevTools |
-| `Ctrl+=` | Zoom + |
-| `Ctrl+-` | Zoom - |
-| `Ctrl+0` | Zoom zurücksetzen |
+| Kürzel              | Aktion             |
+| ------------------- | ------------------ |
+| `Ctrl+R`            | Neu laden          |
+| `Ctrl+Shift+R`      | Hard Reload        |
+| `Alt+←`             | Zurück             |
+| `Alt+→`             | Vor                |
+| `Ctrl+H`            | Startseite         |
+| `F11`               | Vollbild           |
+| `F12`               | DevTools           |
+| `Ctrl+=`            | Zoom +             |
+| `Ctrl+-`            | Zoom -             |
+| `Ctrl+0`            | Zoom zurücksetzen  |
 | `Ctrl+1` – `Ctrl+5` | Quick-Nav Slot 1–5 |
 
 ## Projektstruktur
