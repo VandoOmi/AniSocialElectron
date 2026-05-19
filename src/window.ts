@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, session, shell } from 'electron';
 import * as path from 'path';
 import windowStateKeeper from 'electron-window-state';
 
@@ -67,6 +67,7 @@ export function createMainWindow(callbacks: WindowCallbacks): BrowserWindow {
   win.loadURL(APP_CONFIG.TARGET_URL);
 
   setupPermissions(win);
+  setupContentSecurityPolicy();
   setupScriptInjection(win);
   setupNavigation(win);
   setupContextMenu(win);
@@ -86,6 +87,26 @@ function setupPermissions(win: BrowserWindow): void {
 
   win.webContents.session.setPermissionCheckHandler((_webContents, permission) => {
     return allowedPermissions.includes(permission);
+  });
+}
+
+function setupContentSecurityPolicy(): void {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          `default-src 'self' ${TARGET_ORIGIN}; ` +
+            `script-src 'self' 'unsafe-inline' ${TARGET_ORIGIN}; ` +
+            `style-src 'self' 'unsafe-inline' ${TARGET_ORIGIN}; ` +
+            `img-src 'self' ${TARGET_ORIGIN} https: data:; ` +
+            `media-src 'self' ${TARGET_ORIGIN} https: data:; ` +
+            `connect-src 'self' ${TARGET_ORIGIN} https://api.anisocial.de wss://anisocial.de; ` +
+            `font-src 'self' ${TARGET_ORIGIN} https:; ` +
+            `frame-src 'none';`,
+        ],
+      },
+    });
   });
 }
 
