@@ -85,32 +85,42 @@ export function getSettingsInjectionScript(appVersion: string): string {
   var currentSettings = {};
   var settingsLoaded = false;
 
-  // --- Communication with Preload ---
+  // --- Communication with Preload (via contextBridge) ---
   function requestSettings() {
-    window.postMessage({ type: '__electron_settings_get__' }, '*');
+    if (window.electronAPI && window.electronAPI.getSettings) {
+      window.electronAPI.getSettings().then(function(settings) {
+        currentSettings = settings;
+        settingsLoaded = true;
+        renderSettingsPanel();
+      });
+    }
   }
 
   function saveSetting(key, value) {
-    window.postMessage({ type: '__electron_settings_set__', key: key, value: value }, '*');
+    if (window.electronAPI && window.electronAPI.setSetting) {
+      window.electronAPI.setSetting(key, value).then(function(result) {
+        currentSettings[result.key] = result.value;
+      });
+    }
     currentSettings[key] = value;
   }
 
-  window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === '__electron_settings_data__') {
-      currentSettings = event.data.settings;
-      settingsLoaded = true;
-      renderSettingsPanel();
+  function requestKeybindActions(callback) {
+    if (window.electronAPI && window.electronAPI.getKeybindActions) {
+      window.electronAPI.getKeybindActions().then(callback);
     }
-    if (event.data && event.data.type === '__electron_settings_updated__') {
-      currentSettings[event.data.key] = event.data.value;
+  }
+
+  function pickSoundFile() {
+    if (window.electronAPI && window.electronAPI.pickSoundFile) {
+      window.electronAPI.pickSoundFile().then(function(filePath) {
+        if (filePath) {
+          saveSetting('notifications.customSound', filePath);
+          renderSettingsPanel();
+        }
+      });
     }
-    if (event.data && event.data.type === '__electron_sound_file_picked__') {
-      if (event.data.filePath) {
-        saveSetting('notifications.customSound', event.data.filePath);
-        renderSettingsPanel();
-      }
-    }
-  });
+  }
 
   // --- Tab Injection ---
   function injectTab() {
@@ -382,7 +392,7 @@ export function getSettingsInjectionScript(appVersion: string): string {
     recordingBtn = null;
     document.removeEventListener('keydown', handleEscapeCancel, true);
     // Re-enable menu accelerators
-    window.postMessage({ type: '__electron_keybinds_recording_stop__' }, '*');
+    if (window.electronAPI) window.electronAPI.stopKeybindRecording();
   }
 
   // Only handle Escape/Delete/Backspace locally (these don't get captured by before-input-event)
@@ -438,12 +448,12 @@ export function getSettingsInjectionScript(appVersion: string): string {
     renderSettingsPanel();
   }
 
-  // Listen for captured keybinds from main process
-  window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === '__electron_keybind_captured__') {
-      handleCapturedAccelerator(event.data.accelerator);
-    }
-  });
+  // Listen for captured keybinds from main process via contextBridge
+  if (window.electronAPI && window.electronAPI.onKeybindCaptured) {
+    window.electronAPI.onKeybindCaptured(function(accelerator) {
+      handleCapturedAccelerator(accelerator);
+    });
+  }
 
   function bindEvents(panel) {
     // Toggle switches
@@ -486,7 +496,7 @@ export function getSettingsInjectionScript(appVersion: string): string {
     var filePickBtns = panel.querySelectorAll('button[data-file-pick]');
     filePickBtns.forEach(function(btn) {
       btn.addEventListener('click', function() {
-        window.postMessage({ type: '__electron_pick_sound_file__' }, '*');
+        pickSoundFile();
       });
     });
 
@@ -530,7 +540,7 @@ export function getSettingsInjectionScript(appVersion: string): string {
         btn.innerHTML = '<span class="text-accent-primary animate-pulse">Eingabe...</span>';
         btn.classList.add('border-accent-primary', 'ring-2', 'ring-accent-primary/30');
         // Tell main process to capture keys via before-input-event
-        window.postMessage({ type: '__electron_keybinds_recording_start__' }, '*');
+        if (window.electronAPI) window.electronAPI.startKeybindRecording();
         document.addEventListener('keydown', handleEscapeCancel, true);
       });
     });

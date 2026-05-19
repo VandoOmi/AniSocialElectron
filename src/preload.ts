@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
 // IPC channel names inlined (sandboxed preloads can't require relative modules)
 const IPC_CHANNELS = {
@@ -11,67 +11,27 @@ const IPC_CHANNELS = {
   KEYBINDS_RECORDING_STOP: 'keybinds:recording-stop',
   PICK_SOUND_FILE: 'settings:pick-sound-file',
   RETRY_LOAD: 'app:retry-load',
+  PLAY_NOTIFICATION_SOUND: 'app:play-notification-sound',
 } as const;
 
-// Listen for notification requests from the main world (injected via executeJavaScript).
-// contextIsolation prevents direct prototype patches, but postMessage events cross the boundary.
-window.addEventListener('message', (event) => {
-  if (!event.data || !event.data.type) return;
-
-  if (event.data.type === '__electron_notification__') {
-    ipcRenderer.send(IPC_CHANNELS.SHOW_NOTIFICATION, {
-      title: event.data.title,
-      body: event.data.body,
-      icon: event.data.icon,
-    });
+// Expose a type-safe API to the renderer via contextBridge.
+// This replaces the insecure postMessage('*') pattern with a proper IPC bridge.
+contextBridge.exposeInMainWorld('electronAPI', {
+  showNotification: (payload: { title: string; body: string; icon?: string }) => {
+    ipcRenderer.send(IPC_CHANNELS.SHOW_NOTIFICATION, payload);
     ipcRenderer.send(IPC_CHANNELS.UPDATE_BADGE);
-  }
-
-  // Settings: get all settings
-  if (event.data.type === '__electron_settings_get__') {
-    ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET_ALL).then((settings) => {
-      window.postMessage({ type: '__electron_settings_data__', settings }, '*');
+  },
+  getSettings: (): Promise<unknown> => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET_ALL),
+  setSetting: (key: string, value: unknown): Promise<unknown> =>
+    ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SET, { key, value }),
+  getKeybindActions: (): Promise<unknown> => ipcRenderer.invoke(IPC_CHANNELS.KEYBINDS_GET_ACTIONS),
+  startKeybindRecording: () => ipcRenderer.send(IPC_CHANNELS.KEYBINDS_RECORDING_START),
+  stopKeybindRecording: () => ipcRenderer.send(IPC_CHANNELS.KEYBINDS_RECORDING_STOP),
+  pickSoundFile: (): Promise<string | null> => ipcRenderer.invoke(IPC_CHANNELS.PICK_SOUND_FILE),
+  retryLoad: () => ipcRenderer.send(IPC_CHANNELS.RETRY_LOAD),
+  onKeybindCaptured: (callback: (accelerator: string) => void) => {
+    ipcRenderer.on('keybind:captured', (_event, accelerator: string) => {
+      callback(accelerator);
     });
-  }
-
-  // Settings: set a single setting
-  if (event.data.type === '__electron_settings_set__') {
-    ipcRenderer
-      .invoke(IPC_CHANNELS.SETTINGS_SET, {
-        key: event.data.key,
-        value: event.data.value,
-      })
-      .then((result) => {
-        window.postMessage({ type: '__electron_settings_updated__', ...result }, '*');
-      });
-  }
-
-  // Keybinds: get all actions with effective accelerators
-  if (event.data.type === '__electron_keybinds_get__') {
-    ipcRenderer.invoke(IPC_CHANNELS.KEYBINDS_GET_ACTIONS).then((actions) => {
-      window.postMessage({ type: '__electron_keybinds_data__', actions }, '*');
-    });
-  }
-
-  // Keybinds: start recording (disables menu accelerators)
-  if (event.data.type === '__electron_keybinds_recording_start__') {
-    ipcRenderer.send(IPC_CHANNELS.KEYBINDS_RECORDING_START);
-  }
-
-  // Keybinds: stop recording (re-enables menu accelerators)
-  if (event.data.type === '__electron_keybinds_recording_stop__') {
-    ipcRenderer.send(IPC_CHANNELS.KEYBINDS_RECORDING_STOP);
-  }
-
-  // Settings: pick a sound file via native dialog
-  if (event.data.type === '__electron_pick_sound_file__') {
-    ipcRenderer.invoke(IPC_CHANNELS.PICK_SOUND_FILE).then((filePath) => {
-      window.postMessage({ type: '__electron_sound_file_picked__', filePath }, '*');
-    });
-  }
-
-  // Offline page: retry loading the app
-  if (event.data.type === '__electron_retry_load__') {
-    ipcRenderer.send(IPC_CHANNELS.RETRY_LOAD);
-  }
+  },
 });

@@ -209,11 +209,7 @@ function handleKeybindInput(event: Electron.Event, input: Electron.Input): void 
 
   const accelerator = parts.join('+');
   const webContents = (event as { sender?: Electron.WebContents }).sender;
-  webContents
-    ?.executeJavaScript(
-      `window.postMessage({ type: '__electron_keybind_captured__', accelerator: ${JSON.stringify(accelerator)} }, '*');`,
-    )
-    .catch(() => {});
+  webContents?.send('keybind:captured', accelerator);
 }
 
 function mapKeyToAccelerator(key: string): string {
