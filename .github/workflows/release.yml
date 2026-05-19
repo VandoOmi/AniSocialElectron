@@ -191,5 +191,5 @@ jobs:
           commit_username: Vando
           commit_email: vando.02800@tutamail.com
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: "Update to ${{ steps.version.outputs.pkgver }}"
+          commit_message: 'Update to ${{ steps.version.outputs.pkgver }}'
           force_push: true

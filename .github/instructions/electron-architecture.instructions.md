@@ -1,7 +1,8 @@
 ---
-description: "Use when writing or modifying Electron main process, preload, IPC, or window management code. Covers architecture rules, security boundaries, and process separation for AniSocialDesktop."
-applyTo: "src/**/*.ts"
+description: 'Use when writing or modifying Electron main process, preload, IPC, or window management code. Covers architecture rules, security boundaries, and process separation for AniSocialDesktop.'
+applyTo: 'src/**/*.ts'
 ---
+
 # Electron Architecture
 
 ## Process Separation

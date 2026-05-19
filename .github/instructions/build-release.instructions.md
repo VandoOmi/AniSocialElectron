@@ -1,7 +1,8 @@
 ---
-description: "Use when modifying CI/CD workflows, release process, packaging, or AUR publishing. Covers build pipeline, versioning, and distribution for AniSocialDesktop."
-applyTo: [".github/workflows/**", ".aur/**", "package.json"]
+description: 'Use when modifying CI/CD workflows, release process, packaging, or AUR publishing. Covers build pipeline, versioning, and distribution for AniSocialDesktop.'
+applyTo: ['.github/workflows/**', '.aur/**', 'package.json']
 ---
+
 # Build & Release Workflow
 
 ## Build Pipeline
