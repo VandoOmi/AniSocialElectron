@@ -7,7 +7,7 @@
     "compile": "tsc",
     "prestart": "tsc",
     "start": "electron .",
-    "dev": "concurrently -k \"tsc --watch --preserveWatchOutput\" \"electron .\"",
+    "dev": "concurrently -k \"tsc --watch --preserveWatchOutput\" \"electronmon .\"",
     "build": "tsc && electron-builder",
     "build:linux": "tsc && electron-builder --linux",
     "build:win": "tsc && electron-builder --win",
@@ -15,8 +15,9 @@
     "lint": "eslint src/",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write src/",
-    "format:check": "prettier --check src/"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "author": {
     "name": "Vando",
@@ -29,8 +30,10 @@
     "concurrently": "^9.2.1",
     "electron": "^42.1.0",
     "electron-builder": "^26.0.0",
-    "electron-reloader": "^1.2.3",
+    "electronmon": "^2.0.4",
     "eslint": "^10.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3",
@@ -74,5 +77,20 @@
       "target": "dmg",
       "icon": "assets/icon.png"
     }
+  },
+  "lint-staged": {
+    "*.{ts,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,yml,yaml,md,html}": [
+      "prettier --write"
+    ]
+  },
+  "electronmon": {
+    "patterns": [
+      "dist/**"
+    ],
+    "logLevel": "quiet"
   }
 }
