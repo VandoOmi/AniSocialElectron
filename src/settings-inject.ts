@@ -66,14 +66,8 @@ export function getSettingsInjectionScript(appVersion: string): string {
     }
   ];
 
-  // --- Quick-Nav Slots (rendered separately) ---
-  var QUICKNAV_SLOTS = [
-    { pathKey: 'quicknav.slot1.path', labelKey: 'quicknav.slot1.label', slot: 1 },
-    { pathKey: 'quicknav.slot2.path', labelKey: 'quicknav.slot2.label', slot: 2 },
-    { pathKey: 'quicknav.slot3.path', labelKey: 'quicknav.slot3.label', slot: 3 },
-    { pathKey: 'quicknav.slot4.path', labelKey: 'quicknav.slot4.label', slot: 4 },
-    { pathKey: 'quicknav.slot5.path', labelKey: 'quicknav.slot5.label', slot: 5 },
-  ];
+  // --- Quick-Nav Slots (array-based) ---
+  var QUICKNAV_SLOT_COUNT = 5;
 
   // --- Keybind Actions (from main process) ---
   var KEYBIND_ACTIONS_DATA = ${keybindActionsJson};
@@ -267,15 +261,17 @@ export function getSettingsInjectionScript(appVersion: string): string {
     html += '<p class="text-sm text-text-secondary mb-4">Belege bis zu 5 Slots mit beliebigen Seiten-Pfaden. Nutze die Tastenkürzel (Standard: Strg+1 bis Strg+5) um schnell dorthin zu navigieren.</p>';
     html += '<div class="space-y-3">';
 
-    QUICKNAV_SLOTS.forEach(function(slot) {
-      var pathVal = currentSettings[slot.pathKey] || '';
-      var labelVal = currentSettings[slot.labelKey] || '';
-      html += '<div class="flex flex-col sm:flex-row gap-2 p-3 bg-bg-surface rounded-md border border-white/[0.04]">';
-      html += '<div class="flex items-center gap-2 flex-shrink-0 w-16"><span class="text-text-secondary text-sm font-medium">Slot ' + slot.slot + '</span></div>';
-      html += '<input type="text" data-quicknav-label="' + slot.labelKey + '" value="' + escapeAttr(labelVal) + '" placeholder="Label" class="flex-1 min-w-0 px-3 py-1.5 rounded-md border border-line bg-bg-elevated text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30">';
-      html += '<input type="text" data-quicknav-path="' + slot.pathKey + '" value="' + escapeAttr(pathVal) + '" placeholder="/notifications" class="flex-1 min-w-0 px-3 py-1.5 rounded-md border border-line bg-bg-elevated text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30">';
-      html += '</div>';
-    });
+    QUICKNAV_SLOT_COUNT && (function() {
+      var slots = currentSettings['quicknav.slots'] || [];
+      for (var i = 0; i < QUICKNAV_SLOT_COUNT; i++) {
+        var slot = slots[i] || { path: '', label: '' };
+        html += '<div class="flex flex-col sm:flex-row gap-2 p-3 bg-bg-surface rounded-md border border-white/[0.04]">';
+        html += '<div class="flex items-center gap-2 flex-shrink-0 w-16"><span class="text-text-secondary text-sm font-medium">Slot ' + (i + 1) + '</span></div>';
+        html += '<input type="text" data-quicknav-label="' + i + '" value="' + escapeAttr(slot.label) + '" placeholder="Label" class="flex-1 min-w-0 px-3 py-1.5 rounded-md border border-line bg-bg-elevated text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30">';
+        html += '<input type="text" data-quicknav-path="' + i + '" value="' + escapeAttr(slot.path) + '" placeholder="/notifications" class="flex-1 min-w-0 px-3 py-1.5 rounded-md border border-line bg-bg-elevated text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30">';
+        html += '</div>';
+      }
+    })();
 
     html += '</div>';
     html += '</div>';
@@ -510,22 +506,29 @@ export function getSettingsInjectionScript(appVersion: string): string {
       });
     });
 
-    // Quick-Nav path inputs
+    // Quick-Nav path inputs (array-based)
     var pathInputs = panel.querySelectorAll('input[data-quicknav-path]');
     pathInputs.forEach(function(input) {
       input.addEventListener('change', function() {
+        var idx = parseInt(input.getAttribute('data-quicknav-path'), 10);
         var val = input.value.trim();
-        // Ensure path starts with / if not empty
         if (val && val.charAt(0) !== '/') val = '/' + val;
-        saveSetting(input.getAttribute('data-quicknav-path'), val);
+        var slots = (currentSettings['quicknav.slots'] || []).slice();
+        if (!slots[idx]) slots[idx] = { path: '', label: '' };
+        slots[idx] = Object.assign({}, slots[idx], { path: val });
+        saveSetting('quicknav.slots', slots);
       });
     });
 
-    // Quick-Nav label inputs
+    // Quick-Nav label inputs (array-based)
     var labelInputs = panel.querySelectorAll('input[data-quicknav-label]');
     labelInputs.forEach(function(input) {
       input.addEventListener('change', function() {
-        saveSetting(input.getAttribute('data-quicknav-label'), input.value.trim());
+        var idx = parseInt(input.getAttribute('data-quicknav-label'), 10);
+        var slots = (currentSettings['quicknav.slots'] || []).slice();
+        if (!slots[idx]) slots[idx] = { path: '', label: '' };
+        slots[idx] = Object.assign({}, slots[idx], { label: input.value.trim() });
+        saveSetting('quicknav.slots', slots);
       });
     });
 

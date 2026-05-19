@@ -1,18 +1,41 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { SETTINGS_DEFAULTS, type SettingsKey, type SettingsSchema } from '../types/settings';
+import {
+  SETTINGS_DEFAULTS,
+  type QuickNavSlot,
+  type SettingsKey,
+  type SettingsSchema,
+} from '../types/settings';
 
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
 // In-memory cache — read once from disk, write-through on changes
 let cache: SettingsSchema | null = null;
 
+/** Migrate old per-slot quicknav keys to the new array format */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function migrateQuickNav(raw: any): void {
+  if (raw['quicknav.slots']) return; // already migrated
+  const slots: QuickNavSlot[] = [];
+  for (let i = 1; i <= 5; i++) {
+    slots.push({
+      path: raw[`quicknav.slot${i}.path`] || '',
+      label: raw[`quicknav.slot${i}.label`] || '',
+    });
+    delete raw[`quicknav.slot${i}.path`];
+    delete raw[`quicknav.slot${i}.label`];
+  }
+  raw['quicknav.slots'] = slots;
+}
+
 function loadCache(): SettingsSchema {
   if (cache) return cache;
   try {
     const data = fs.readFileSync(settingsPath, 'utf-8');
-    cache = { ...SETTINGS_DEFAULTS, ...JSON.parse(data) };
+    const raw = JSON.parse(data);
+    migrateQuickNav(raw);
+    cache = { ...SETTINGS_DEFAULTS, ...raw };
   } catch {
     cache = { ...SETTINGS_DEFAULTS };
   }

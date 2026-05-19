@@ -155,16 +155,7 @@ function registerSettingsListeners(): void {
 
   onSettingChanged('keybinds.overrides', () => buildApplicationMenu(mainWindow));
 
-  type SlotPathKey = `quicknav.slot${1 | 2 | 3 | 4 | 5}.path`;
-  type SlotLabelKey = `quicknav.slot${1 | 2 | 3 | 4 | 5}.label`;
-  for (let i = 1; i <= 5; i++) {
-    onSettingChanged(`quicknav.slot${i}.path` as SlotPathKey, () =>
-      buildApplicationMenu(mainWindow),
-    );
-    onSettingChanged(`quicknav.slot${i}.label` as SlotLabelKey, () =>
-      buildApplicationMenu(mainWindow),
-    );
-  }
+  onSettingChanged('quicknav.slots', () => buildApplicationMenu(mainWindow));
 }
 
 // --- Notification Polling ---

@@ -161,24 +161,21 @@ function buildEditSubmenu(): MenuItemConstructorOptions[] {
 
 function buildQuickNavItems(mainWindow: BrowserWindow | null): MenuItemConstructorOptions[] {
   const items: MenuItemConstructorOptions[] = [];
+  const slots = getSetting('quicknav.slots');
 
-  type SlotPath = `quicknav.slot${1 | 2 | 3 | 4 | 5}.path`;
-  type SlotLabel = `quicknav.slot${1 | 2 | 3 | 4 | 5}.label`;
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    const accelerator = getEffectiveAccelerator(`quicknav.slot${i + 1}`);
 
-  for (let i = 1; i <= 5; i++) {
-    const slotPath = getSetting(`quicknav.slot${i}.path` as SlotPath);
-    const slotLabel = getSetting(`quicknav.slot${i}.label` as SlotLabel);
-    const accelerator = getEffectiveAccelerator(`quicknav.slot${i}`);
-
-    if (slotPath) {
+    if (slot.path) {
       items.push({
-        label: slotLabel || `Slot ${i}: ${slotPath}`,
+        label: slot.label || `Slot ${i + 1}: ${slot.path}`,
         accelerator,
-        click: () => mainWindow?.loadURL(APP_CONFIG.TARGET_URL + slotPath),
+        click: () => mainWindow?.loadURL(APP_CONFIG.TARGET_URL + slot.path),
       });
     } else {
       items.push({
-        label: `Slot ${i}: (aktuelle Seite zuweisen)`,
+        label: `Slot ${i + 1}: (aktuelle Seite zuweisen)`,
         accelerator,
         click: () => assignQuickNavSlot(mainWindow, i),
       });
@@ -188,21 +185,20 @@ function buildQuickNavItems(mainWindow: BrowserWindow | null): MenuItemConstruct
   return items;
 }
 
-function assignQuickNavSlot(mainWindow: BrowserWindow | null, slot: number): void {
+function assignQuickNavSlot(mainWindow: BrowserWindow | null, index: number): void {
   if (!mainWindow) return;
 
   try {
     const currentUrl = mainWindow.webContents.getURL();
     const pagePath = new URL(currentUrl).pathname;
 
-    type SlotPath = `quicknav.slot${1 | 2 | 3 | 4 | 5}.path`;
-    type SlotLabel = `quicknav.slot${1 | 2 | 3 | 4 | 5}.label`;
-    setSetting(`quicknav.slot${slot}.path` as SlotPath, pagePath);
-    setSetting(`quicknav.slot${slot}.label` as SlotLabel, '');
+    const slots = [...getSetting('quicknav.slots')];
+    slots[index] = { path: pagePath, label: '' };
+    setSetting('quicknav.slots', slots);
 
     new Notification({
       title: APP_CONFIG.APP_NAME,
-      body: `„${pagePath}" wurde als Quick-Nav Slot ${slot} gespeichert.`,
+      body: `„${pagePath}" wurde als Quick-Nav Slot ${index + 1} gespeichert.`,
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       silent: true,
     }).show();

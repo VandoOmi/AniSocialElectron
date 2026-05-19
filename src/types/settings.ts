@@ -1,3 +1,9 @@
+/** A single Quick-Nav slot */
+export interface QuickNavSlot {
+  path: string;
+  label: string;
+}
+
 /** Settings schema for the desktop app */
 export interface SettingsSchema {
   'general.closeToTray': boolean;
@@ -10,16 +16,7 @@ export interface SettingsSchema {
   'notifications.pollingIntervalSec': number;
   'appearance.zoomLevel': number;
   'keybinds.overrides': Record<string, string>;
-  'quicknav.slot1.path': string;
-  'quicknav.slot1.label': string;
-  'quicknav.slot2.path': string;
-  'quicknav.slot2.label': string;
-  'quicknav.slot3.path': string;
-  'quicknav.slot3.label': string;
-  'quicknav.slot4.path': string;
-  'quicknav.slot4.label': string;
-  'quicknav.slot5.path': string;
-  'quicknav.slot5.label': string;
+  'quicknav.slots': QuickNavSlot[];
 }
 
 /** Default values for all settings */
@@ -34,16 +31,13 @@ export const SETTINGS_DEFAULTS: SettingsSchema = {
   'notifications.pollingIntervalSec': 30,
   'appearance.zoomLevel': 0,
   'keybinds.overrides': {},
-  'quicknav.slot1.path': '',
-  'quicknav.slot1.label': '',
-  'quicknav.slot2.path': '',
-  'quicknav.slot2.label': '',
-  'quicknav.slot3.path': '',
-  'quicknav.slot3.label': '',
-  'quicknav.slot4.path': '',
-  'quicknav.slot4.label': '',
-  'quicknav.slot5.path': '',
-  'quicknav.slot5.label': '',
+  'quicknav.slots': [
+    { path: '', label: '' },
+    { path: '', label: '' },
+    { path: '', label: '' },
+    { path: '', label: '' },
+    { path: '', label: '' },
+  ],
 };
 
 export type SettingsKey = keyof SettingsSchema;
