@@ -6,7 +6,7 @@ import { IPC_CHANNELS, type NotificationPayload } from './types/ipc';
 import { initAutoUpdater } from './updater';
 import { initNotifications, restartPolling } from './push';
 import { initSettingsIpc } from './settings/ipc';
-import { getSetting, onSettingChanged } from './settings/store';
+import { flushSettings, getSetting, onSettingChanged } from './settings/store';
 import { createMainWindow, startKeybindRecording, stopKeybindRecording } from './window';
 import { createTray, updateUnreadBadge } from './tray';
 import { buildApplicationMenu } from './menu';
@@ -188,6 +188,7 @@ function startNotificationPolling(): void {
 
 app.on('before-quit', () => {
   isQuitting = true;
+  flushSettings();
 });
 
 if (!getSetting('general.hardwareAcceleration')) {
