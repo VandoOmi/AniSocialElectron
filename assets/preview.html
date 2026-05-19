@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AniSocial</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0a0a0f;
+      }
+      #preview {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        filter: blur(10px);
+        transform: scale(1.02); /* hide blur edge artifacts */
+      }
+      /* Offline overlay */
+      #offline-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 10, 15, 0.85);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #e4e4e7;
+      }
+      #offline-overlay.visible {
+        display: flex;
+      }
+      .offline-container {
+        text-align: center;
+        max-width: 420px;
+        padding: 2rem;
+      }
+      .offline-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        opacity: 0.6;
+      }
+      .offline-container h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+      }
+      .offline-container p {
+        color: #a1a1aa;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+      }
+      #retry-status {
+        font-size: 0.85rem;
+        color: #71717a;
+        margin-bottom: 1.5rem;
+        font-family: monospace;
+      }
+      #retry-btn {
+        display: none;
+        background: #7c3aed;
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      #retry-btn:hover {
+        background: #6d28d9;
+      }
+      #retry-btn:active {
+        background: #5b21b6;
+      }
+    </style>
+  </head>
+  <body>
+    <img id="preview" alt="" />
+    <div id="offline-overlay">
+      <div class="offline-container">
+        <svg
+          class="offline-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M1 1l22 22"></path>
+          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+          <path d="M10.71 5.05A16 16 0 0 1 22.56 9"></path>
+          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+          <line x1="12" y1="20" x2="12.01" y2="20"></line>
+        </svg>
+        <h1>Keine Verbindung</h1>
+        <p>
+          AniSocial ist gerade nicht erreichbar. Prüfe deine Internetverbindung.
+        </p>
+        <div id="retry-status"></div>
+        <button id="retry-btn">Erneut versuchen</button>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var imgPath = params.get('img');
+        if (imgPath) {
+          document.getElementById('preview').src = 'file://' + imgPath;
+        }
+
+        var overlay = document.getElementById('offline-overlay');
+        var statusEl = document.getElementById('retry-status');
+        var retryBtn = document.getElementById('retry-btn');
+
+        // If opened with ?offline=1, show overlay immediately and start retries
+        if (params.get('offline') === '1') {
+          overlay.classList.add('visible');
+          startAutoRetry();
+        }
+
+        var retryCount = 0;
+        var maxRetries = 5;
+        var baseDelay = 3000; // 3s, 6s, 12s, 24s, 48s
+
+        function startAutoRetry() {
+          retryCount = 0;
+          attemptRetry();
+        }
+
+        function attemptRetry() {
+          retryCount++;
+          if (retryCount > maxRetries) {
+            statusEl.textContent = 'Automatische Versuche fehlgeschlagen.';
+            retryBtn.style.display = 'inline-block';
+            return;
+          }
+          var delay = baseDelay * Math.pow(2, retryCount - 1);
+          statusEl.textContent =
+            'Verbindungsversuch ' + retryCount + '/' + maxRetries + ' in ' + Math.round(delay / 1000) + 's...';
+          setTimeout(function () {
+            statusEl.textContent = 'Verbindungsversuch ' + retryCount + '/' + maxRetries + '...';
+            if (window.electronAPI && window.electronAPI.retryLoad) {
+              window.electronAPI.retryLoad();
+            }
+          }, delay);
+        }
+
+        retryBtn.addEventListener('click', function () {
+          retryBtn.style.display = 'none';
+          statusEl.textContent = 'Verbinde...';
+          if (window.electronAPI && window.electronAPI.retryLoad) {
+            window.electronAPI.retryLoad();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

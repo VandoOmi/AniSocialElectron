@@ -8,6 +8,7 @@ import { getSettingsInjectionScript } from './settings-inject';
 import { getNotificationMockScript } from './inject/notification-mock';
 import { getPushMockScript } from './inject/push-mock';
 import { showContextMenu } from './menu';
+import { hasPreview, getPreviewPath, capturePreview } from './preview';
 
 // --- URL Safety ---
 
@@ -61,10 +62,24 @@ export function createMainWindow(callbacks: WindowCallbacks): BrowserWindow {
     },
     show: false,
     autoHideMenuBar: true,
+    backgroundColor: '#0a0a0f',
   });
 
   windowState.manage(win);
-  win.loadURL(APP_CONFIG.TARGET_URL);
+
+  // Show blurred preview (or dark bg) immediately, then load the real URL
+  if (hasPreview()) {
+    const previewHtml = path.join(__dirname, '..', 'assets', 'preview.html');
+    win.loadFile(previewHtml, { query: { img: getPreviewPath() } });
+  } else {
+    const previewHtml = path.join(__dirname, '..', 'assets', 'preview.html');
+    win.loadFile(previewHtml);
+  }
+
+  win.once('ready-to-show', () => {
+    win.show();
+    loadTargetWithTimeout(win);
+  });
 
   setupPermissions(win);
   setupContentSecurityPolicy();
@@ -77,6 +92,58 @@ export function createMainWindow(callbacks: WindowCallbacks): BrowserWindow {
 }
 
 // --- Private Setup Functions ---
+
+const LOAD_TIMEOUT_MS = 30_000;
+
+function loadTargetWithTimeout(win: BrowserWindow): void {
+  let loaded = false;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const onFinish = () => {
+    loaded = true;
+    if (timeoutId) clearTimeout(timeoutId);
+  };
+
+  // did-finish-load fires when the URL finishes loading (success)
+  win.webContents.on('did-finish-load', () => {
+    const url = win.webContents.getURL();
+    if (isInternalUrl(url)) {
+      onFinish();
+      // Capture a fresh preview once the page is settled
+      setTimeout(() => capturePreview(win), 2000);
+    }
+  });
+
+  // did-fail-load: notify preview page to handle retries
+  win.webContents.on('did-fail-load', (_event, errorCode, _errorDescription, validatedURL) => {
+    if (errorCode === -3) return; // Aborted navigations
+    if (!isInternalUrl(validatedURL)) return;
+
+    // If we haven't successfully loaded yet, show offline overlay in preview
+    if (!loaded) {
+      // Go back to preview page and trigger offline overlay
+      const previewHtml = path.join(__dirname, '..', 'assets', 'preview.html');
+      const query: Record<string, string> = {};
+      if (hasPreview()) query.img = getPreviewPath();
+      query.offline = '1';
+      win.loadFile(previewHtml, { query });
+    }
+  });
+
+  // Start loading the real URL
+  win.loadURL(APP_CONFIG.TARGET_URL);
+
+  // After 30s, if not loaded, go back to preview page with offline overlay
+  timeoutId = setTimeout(() => {
+    if (!loaded && !win.isDestroyed()) {
+      const previewHtml = path.join(__dirname, '..', 'assets', 'preview.html');
+      const query: Record<string, string> = {};
+      if (hasPreview()) query.img = getPreviewPath();
+      query.offline = '1';
+      win.loadFile(previewHtml, { query });
+    }
+  }, LOAD_TIMEOUT_MS);
+}
 
 function setupPermissions(win: BrowserWindow): void {
   const allowedPermissions = ['notifications', 'push'];
@@ -137,20 +204,6 @@ function setupScriptInjection(win: BrowserWindow): void {
 }
 
 function setupNavigation(win: BrowserWindow): void {
-  // Show window when page is ready to avoid white flash
-  win.once('ready-to-show', () => win.show());
-
-  // Show offline page when the site can't be reached
-  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
-    if (errorCode === -3) return; // Aborted
-    if (!isInternalUrl(validatedURL)) return;
-
-    const offlinePath = path.join(__dirname, '..', 'assets', 'offline.html');
-    win.loadFile(offlinePath, {
-      query: { code: String(errorCode), desc: errorDescription },
-    });
-  });
-
   // Open external links in system browser
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (!isInternalUrl(url) && isSafeExternalUrl(url)) {

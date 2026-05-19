@@ -10,6 +10,7 @@ import { flushSettings, getSetting, onSettingChanged } from './settings/store';
 import { createMainWindow, startKeybindRecording, stopKeybindRecording } from './window';
 import { createTray, updateUnreadBadge } from './tray';
 import { buildApplicationMenu } from './menu';
+import { capturePreview } from './preview';
 
 // --- Single Instance Lock ---
 
@@ -66,6 +67,7 @@ function initWindow(): void {
     onClose: (event) => {
       if (!isQuitting && getSetting('general.closeToTray')) {
         event.preventDefault();
+        if (mainWindow) capturePreview(mainWindow);
         mainWindow?.hide();
       }
     },
@@ -179,6 +181,7 @@ function startNotificationPolling(): void {
 
 app.on('before-quit', () => {
   isQuitting = true;
+  if (mainWindow && !mainWindow.isDestroyed()) capturePreview(mainWindow);
   flushSettings();
 });
 
