@@ -127,9 +127,9 @@ async function pollNotifications(): Promise<void> {
       }
     }
 
-    if (newNotifications.length > 0 && onNotification) {
-      const unreadCount = getUnreadCount(notifications);
+    const unreadCount = getUnreadCount(notifications);
 
+    if (newNotifications.length > 0 && onNotification) {
       if (newNotifications.length === 1) {
         const n = newNotifications[0];
         const fromName = n.fromUser?.displayName || n.fromUser?.username || 'Jemand';
@@ -139,6 +139,9 @@ async function pollNotifications(): Promise<void> {
         const body = `${newNotifications.length} neue Benachrichtigungen`;
         onNotification('AniSocial', body, unreadCount);
       }
+    } else if (onNotification) {
+      // No new notifications — still sync the badge (e.g. user read on another device)
+      onNotification('', '', unreadCount);
     }
   } catch (e) {
     console.error('[Notifications] Poll failed:', e);
