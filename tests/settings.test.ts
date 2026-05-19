@@ -23,13 +23,11 @@ describe('SETTINGS_DEFAULTS', () => {
   });
 
   it('should have 5 empty quicknav slots', () => {
-    for (let i = 1; i <= 5; i++) {
-      expect(SETTINGS_DEFAULTS[`quicknav.slot${i}.path` as keyof typeof SETTINGS_DEFAULTS]).toBe(
-        '',
-      );
-      expect(SETTINGS_DEFAULTS[`quicknav.slot${i}.label` as keyof typeof SETTINGS_DEFAULTS]).toBe(
-        '',
-      );
-    }
+    const slots = SETTINGS_DEFAULTS['quicknav.slots'];
+    expect(slots).toHaveLength(5);
+    slots.forEach((slot) => {
+      expect(slot.path).toBe('');
+      expect(slot.label).toBe('');
+    });
   });
 });
