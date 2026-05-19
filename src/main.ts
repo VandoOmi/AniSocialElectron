@@ -1,12 +1,20 @@
 import { app, BrowserWindow, ipcMain, Menu, Notification } from 'electron';
 import * as path from 'path';
 
+// Enable hot-reload in development
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('electron-reloader')(module, { watchRenderer: false });
+} catch {
+  // Production: module not available
+}
+
 import { APP_CONFIG } from './types/config';
 import { IPC_CHANNELS, type NotificationPayload } from './types/ipc';
 import { initAutoUpdater } from './updater';
 import { initNotifications, restartPolling } from './push';
 import { initSettingsIpc } from './settings/ipc';
-import { getSetting, onSettingChanged } from './settings/store';
+import { flushSettings, getSetting, onSettingChanged } from './settings/store';
 import { createMainWindow, startKeybindRecording, stopKeybindRecording } from './window';
 import { createTray, updateUnreadBadge } from './tray';
 import { buildApplicationMenu } from './menu';
@@ -53,15 +61,10 @@ function playNotificationSound(): void {
     : path.join(__dirname, '..', 'assets', 'notification.wav').replace(/\\/g, '/');
   const volume = Math.max(0, Math.min(1, getSetting('notifications.volume') / 100));
 
-  mainWindow?.webContents
-    .executeJavaScript(
-      `(function() {
-        var a = new Audio(${JSON.stringify('file:///' + soundFile)});
-        a.volume = ${volume};
-        a.play().catch(function() {});
-      })();`,
-    )
-    .catch(() => {});
+  mainWindow?.webContents.send('play-notification-sound', {
+    url: 'file:///' + soundFile,
+    volume,
+  });
 }
 
 // --- Window Lifecycle ---
@@ -184,6 +187,7 @@ function startNotificationPolling(): void {
 
 app.on('before-quit', () => {
   isQuitting = true;
+  flushSettings();
 });
 
 if (!getSetting('general.hardwareAcceleration')) {

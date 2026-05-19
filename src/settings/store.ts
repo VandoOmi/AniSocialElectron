@@ -28,6 +28,9 @@ function migrateQuickNav(raw: any): void {
   }
   raw['quicknav.slots'] = slots;
 }
+// Debounced write: avoid blocking main thread on rapid setting changes
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+const PERSIST_DELAY_MS = 500;
 
 function loadCache(): SettingsSchema {
   if (cache) return cache;
@@ -44,6 +47,21 @@ function loadCache(): SettingsSchema {
 
 function persist(): void {
   if (!cache) return;
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    fs.promises
+      .mkdir(path.dirname(settingsPath), { recursive: true })
+      .then(() => fs.promises.writeFile(settingsPath, JSON.stringify(cache, null, 2), 'utf-8'))
+      .catch((err) => console.error('[Settings] Failed to persist:', err));
+  }, PERSIST_DELAY_MS);
+}
+
+/** Flush pending writes immediately (call before app quit). */
+export function flushSettings(): void {
+  if (!persistTimer || !cache) return;
+  clearTimeout(persistTimer);
+  persistTimer = null;
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(cache, null, 2), 'utf-8');
 }
