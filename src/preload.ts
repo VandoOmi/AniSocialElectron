@@ -38,11 +38,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 // Listen for sound playback requests from the main process.
 // The preload has access to Web APIs (Audio) in the renderer process.
-ipcRenderer.on(
-  'play-notification-sound',
-  (_event, data: { url: string; volume: number }) => {
-    const audio = new Audio(data.url);
-    audio.volume = data.volume;
-    audio.play().catch(() => {});
-  },
-);
+ipcRenderer.on('play-notification-sound', (_event, data: { url: string; volume: number }) => {
+  const audio = new Audio(data.url);
+  audio.volume = data.volume;
+  audio.play().catch(() => {});
+});
