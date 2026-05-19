@@ -85,7 +85,9 @@
       document.getElementById('errorDetail').textContent = (code ? 'ERR_' + code : '') + (desc ? ' – ' + desc : '');
     }
     document.getElementById('retryBtn').addEventListener('click', function() {
-      window.postMessage({ type: '__electron_retry_load__' }, '*');
+      if (window.electronAPI && window.electronAPI.retryLoad) {
+        window.electronAPI.retryLoad();
+      }
     });
   </script>
 </body>

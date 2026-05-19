@@ -6,12 +6,13 @@ export function getNotificationMockScript(): string {
 
       function NotificationOverride(title, options) {
         options = options || {};
-        window.postMessage({
-          type: '__electron_notification__',
-          title: title,
-          body: options.body || '',
-          icon: options.icon || undefined,
-        }, '*');
+        if (window.electronAPI && window.electronAPI.showNotification) {
+          window.electronAPI.showNotification({
+            title: title,
+            body: options.body || '',
+            icon: options.icon || undefined,
+          });
+        }
         this.title = title;
         this.body = options.body || '';
         this.onclick = null;
