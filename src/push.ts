@@ -28,8 +28,10 @@ type OnNotificationCallback = (title: string, body: string, count: number) => vo
 
 let onNotification: OnNotificationCallback | null = null;
 const seenIds: Set<string> = new Set();
-let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let isFirstPoll = true;
+let consecutiveFailures = 0;
+const MAX_BACKOFF_MULTIPLIER = 8;
 
 function getUnreadCount(notifications: AniNotification[]): number {
   return notifications.filter((n) => !n.isRead).length;
@@ -129,28 +131,46 @@ async function pollNotifications(): Promise<void> {
       // No new notifications — still sync the badge (e.g. user read on another device)
       onNotification('', '', unreadCount);
     }
+
+    consecutiveFailures = 0;
   } catch (e) {
+    consecutiveFailures++;
     console.error('[Notifications] Poll failed:', e);
+  } finally {
+    scheduleNextPoll();
   }
+}
+
+function getNextInterval(): number {
+  const baseMs = getSetting('notifications.pollingIntervalSec') * 1000;
+  if (consecutiveFailures === 0) return baseMs;
+  const multiplier = Math.min(Math.pow(2, consecutiveFailures), MAX_BACKOFF_MULTIPLIER);
+  return baseMs * multiplier;
+}
+
+function scheduleNextPoll(): void {
+  if (!pollTimer) return; // polling was stopped
+  const interval = getNextInterval();
+  pollTimer = setTimeout(() => {
+    pollNotifications();
+  }, interval);
 }
 
 function startPolling(): void {
   if (pollTimer) return;
 
-  const intervalMs = getSetting('notifications.pollingIntervalSec') * 1000;
-
-  // Initial poll after short delay (wait for login/cookies)
-  setTimeout(() => {
+  // Use a non-null sentinel so scheduleNextPoll knows polling is active
+  pollTimer = setTimeout(() => {
     pollNotifications();
-    pollTimer = setInterval(pollNotifications, intervalMs);
   }, 5000);
 
+  const intervalMs = getSetting('notifications.pollingIntervalSec') * 1000;
   console.log(`[Notifications] Polling started (every ${intervalMs / 1000}s)`);
 }
 
 function stopPolling(): void {
   if (pollTimer) {
-    clearInterval(pollTimer);
+    clearTimeout(pollTimer);
     pollTimer = null;
   }
 }
